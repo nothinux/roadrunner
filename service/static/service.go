@@ -1,7 +1,7 @@
 package static
 
 import (
-	rrttp "github.com/spiral/roadrunner/service/http"
+	rrhttp "github.com/spiral/roadrunner/service/http"
 	"net/http"
 	"path"
 )
@@ -20,7 +20,7 @@ type Service struct {
 
 // Init must return configure service and return true if service hasStatus enabled. Must return error in case of
 // misconfiguration. Services must not be used without proper configuration pushed first.
-func (s *Service) Init(cfg *Config, r *rrttp.Service) (bool, error) {
+func (s *Service) Init(cfg *Config, r *rrhttp.Service) (bool, error) {
 	if r == nil {
 		return false, nil
 	}
@@ -45,12 +45,17 @@ func (s *Service) middleware(f http.HandlerFunc) http.HandlerFunc {
 func (s *Service) handleStatic(w http.ResponseWriter, r *http.Request) bool {
 	fPath := path.Clean(r.URL.Path)
 
-	if s.cfg.Forbids(fPath) {
+	if s.cfg.AlwaysForbid(fPath) {
 		return false
 	}
 
 	f, err := s.root.Open(fPath)
 	if err != nil {
+		if s.cfg.AlwaysServe(fPath) {
+			w.WriteHeader(404)
+			return true
+		}
+
 		return false
 	}
 	defer f.Close()

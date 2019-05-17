@@ -23,16 +23,16 @@ package cmd
 import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 	"github.com/spiral/roadrunner/cmd/util"
 	"github.com/spiral/roadrunner/service"
+	"github.com/spiral/roadrunner/service/limit"
 	"os"
-	"path/filepath"
 )
 
-// Service bus for all the commands.
+// Services bus for all the commands.
 var (
-	cfgFile string
+	cfgFile, workDir, logFormat string
+	override                    []string
 
 	// Verbose enables verbosity mode (container specific).
 	Verbose bool
@@ -52,32 +52,12 @@ var (
 		SilenceErrors: true,
 		SilenceUsage:  true,
 		Short: util.Sprintf(
-			"<green>RoadRunner, PHP Application Server:</reset>\nVersion: <yellow+hb>%s</reset>, %s",
+			"<green>RoadRunner</reset>, PHP Application Server\nVersion: <yellow+hb>%s</reset>, %s",
 			Version,
 			BuildTime,
 		),
 	}
 )
-
-// ViperWrapper provides interface bridge between v configs and service.Config.
-type ViperWrapper struct {
-	v *viper.Viper
-}
-
-// Get nested config section (sub-map), returns nil if section not found.
-func (w *ViperWrapper) Get(key string) service.Config {
-	sub := w.v.Sub(key)
-	if sub == nil {
-		return nil
-	}
-
-	return &ViperWrapper{sub}
-}
-
-// Unmarshal unmarshal config data into given struct.
-func (w *ViperWrapper) Unmarshal(out interface{}) error {
-	return w.v.Unmarshal(out)
-}
 
 // Execute adds all child commands to the CLI command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the CLI.
@@ -89,63 +69,66 @@ func Execute() {
 }
 
 func init() {
-	CLI.PersistentFlags().BoolVarP(&Verbose, "verbose", "v", false, "Verbose output")
+	CLI.PersistentFlags().BoolVarP(&Verbose, "verbose", "v", false, "verbose output")
 	CLI.PersistentFlags().BoolVarP(&Debug, "debug", "d", false, "debug mode")
+	CLI.PersistentFlags().StringVarP(&logFormat, "logFormat", "l", "color", "select log formatter (color, json, plain)")
 	CLI.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "config file (default is .rr.yaml)")
+	CLI.PersistentFlags().StringVarP(&workDir, "workDir", "w", "", "work directory")
+
+	CLI.PersistentFlags().StringArrayVarP(
+		&override,
+		"override",
+		"o",
+		nil,
+		"override config value (dot.notation=value)",
+	)
 
 	cobra.OnInitialize(func() {
 		if Verbose {
 			Logger.SetLevel(logrus.DebugLevel)
 		}
 
-		if cfg := initConfig(cfgFile, []string{"."}, ".rr"); cfg != nil {
-			if err := Container.Init(cfg); err != nil {
+		configureLogger(logFormat)
+
+		cfg, err := util.LoadConfig(cfgFile, []string{"."}, ".rr", override)
+		if err != nil {
+			Logger.Warnf("config: %s", err)
+			return
+		}
+
+		if workDir != "" {
+			if err := os.Chdir(workDir); err != nil {
 				util.Printf("<red+hb>Error:</reset> <red>%s</reset>\n", err)
 				os.Exit(1)
+			}
+		}
+
+		if err := Container.Init(cfg); err != nil {
+			util.Printf("<red+hb>Error:</reset> <red>%s</reset>\n", err)
+			os.Exit(1)
+		}
+
+		// global watcher config
+		if Verbose {
+			wcv, _ := Container.Get(limit.ID)
+			if wcv, ok := wcv.(*limit.Service); ok {
+				wcv.AddListener(func(event int, ctx interface{}) {
+					util.LogEvent(Logger, event, ctx)
+				})
 			}
 		}
 	})
 }
 
-func initConfig(cfgFile string, path []string, name string) service.Config {
-	cfg := viper.New()
-
-	if cfgFile != "" {
-		if absPath, err := filepath.Abs(cfgFile); err == nil {
-			cfgFile = absPath
-
-			// force working absPath related to config file
-			if err := os.Chdir(filepath.Dir(absPath)); err != nil {
-				Logger.Error(err)
-			}
-		}
-
-		// Use cfg file from the flag.
-		cfg.SetConfigFile(cfgFile)
-
-		if dir, err := filepath.Abs(cfgFile); err == nil {
-			// force working absPath related to config file
-			if err := os.Chdir(filepath.Dir(dir)); err != nil {
-				Logger.Error(err)
-			}
-		}
-	} else {
-		// automatic location
-		for _, p := range path {
-			cfg.AddConfigPath(p)
-		}
-
-		cfg.SetConfigName(name)
+func configureLogger(format string) {
+	util.Colorize = false
+	switch format {
+	case "color", "default":
+		util.Colorize = true
+		Logger.Formatter = &logrus.TextFormatter{ForceColors: true}
+	case "plain":
+		Logger.Formatter = &logrus.TextFormatter{DisableColors: true}
+	case "json":
+		Logger.Formatter = &logrus.JSONFormatter{}
 	}
-
-	// read in environment variables that match
-	cfg.AutomaticEnv()
-
-	// If a cfg file is found, read it in.
-	if err := cfg.ReadInConfig(); err != nil {
-		Logger.Warnf("config: %s", err)
-		return nil
-	}
-
-	return &ViperWrapper{cfg}
 }

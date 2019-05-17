@@ -31,8 +31,8 @@ func Test_Config_Hydrate_Error2(t *testing.T) {
 
 func Test_Config_Valid(t *testing.T) {
 	cfg := &Config{
-		Address:    ":8080",
-		MaxRequest: 1024,
+		Address:        ":8080",
+		MaxRequestSize: 1024,
 		Uploads: &UploadsConfig{
 			Dir:    os.TempDir(),
 			Forbid: []string{".go"},
@@ -51,6 +51,55 @@ func Test_Config_Valid(t *testing.T) {
 	assert.NoError(t, cfg.Valid())
 }
 
+func Test_Trusted_Subnets(t *testing.T) {
+	cfg := &Config{
+		Address:        ":8080",
+		MaxRequestSize: 1024,
+		Uploads: &UploadsConfig{
+			Dir:    os.TempDir(),
+			Forbid: []string{".go"},
+		},
+		TrustedSubnets: []string{"200.1.0.0/16"},
+		Workers: &roadrunner.ServerConfig{
+			Command: "php tests/client.php echo pipes",
+			Relay:   "pipes",
+			Pool: &roadrunner.Config{
+				NumWorkers:      1,
+				AllocateTimeout: time.Second,
+				DestroyTimeout:  time.Second,
+			},
+		},
+	}
+
+	assert.NoError(t, cfg.parseCIDRs())
+
+	assert.True(t, cfg.IsTrusted("200.1.0.10"))
+	assert.False(t, cfg.IsTrusted("127.0.0.0.1"))
+}
+
+func Test_Trusted_Subnets_Err(t *testing.T) {
+	cfg := &Config{
+		Address:        ":8080",
+		MaxRequestSize: 1024,
+		Uploads: &UploadsConfig{
+			Dir:    os.TempDir(),
+			Forbid: []string{".go"},
+		},
+		TrustedSubnets: []string{"200.1.0.0"},
+		Workers: &roadrunner.ServerConfig{
+			Command: "php tests/client.php echo pipes",
+			Relay:   "pipes",
+			Pool: &roadrunner.Config{
+				NumWorkers:      1,
+				AllocateTimeout: time.Second,
+				DestroyTimeout:  time.Second,
+			},
+		},
+	}
+
+	assert.Error(t, cfg.parseCIDRs())
+}
+
 func Test_Config_Valid_SSL(t *testing.T) {
 	cfg := &Config{
 		Address: ":8080",
@@ -58,7 +107,7 @@ func Test_Config_Valid_SSL(t *testing.T) {
 			Cert: "fixtures/server.crt",
 			Key:  "fixtures/server.key",
 		},
-		MaxRequest: 1024,
+		MaxRequestSize: 1024,
 		Uploads: &UploadsConfig{
 			Dir:    os.TempDir(),
 			Forbid: []string{".go"},
@@ -87,7 +136,7 @@ func Test_Config_SSL_No_key(t *testing.T) {
 		SSL: SSLConfig{
 			Cert: "fixtures/server.crt",
 		},
-		MaxRequest: 1024,
+		MaxRequestSize: 1024,
 		Uploads: &UploadsConfig{
 			Dir:    os.TempDir(),
 			Forbid: []string{".go"},
@@ -112,7 +161,7 @@ func Test_Config_SSL_No_Cert(t *testing.T) {
 		SSL: SSLConfig{
 			Key: "fixtures/server.key",
 		},
-		MaxRequest: 1024,
+		MaxRequestSize: 1024,
 		Uploads: &UploadsConfig{
 			Dir:    os.TempDir(),
 			Forbid: []string{".go"},
@@ -133,8 +182,8 @@ func Test_Config_SSL_No_Cert(t *testing.T) {
 
 func Test_Config_NoUploads(t *testing.T) {
 	cfg := &Config{
-		Address:    ":8080",
-		MaxRequest: 1024,
+		Address:        ":8080",
+		MaxRequestSize: 1024,
 		Workers: &roadrunner.ServerConfig{
 			Command: "php tests/client.php echo pipes",
 			Relay:   "pipes",
@@ -151,8 +200,8 @@ func Test_Config_NoUploads(t *testing.T) {
 
 func Test_Config_NoWorkers(t *testing.T) {
 	cfg := &Config{
-		Address:    ":8080",
-		MaxRequest: 1024,
+		Address:        ":8080",
+		MaxRequestSize: 1024,
 		Uploads: &UploadsConfig{
 			Dir:    os.TempDir(),
 			Forbid: []string{".go"},
@@ -164,8 +213,8 @@ func Test_Config_NoWorkers(t *testing.T) {
 
 func Test_Config_NoPool(t *testing.T) {
 	cfg := &Config{
-		Address:    ":8080",
-		MaxRequest: 1024,
+		Address:        ":8080",
+		MaxRequestSize: 1024,
 		Uploads: &UploadsConfig{
 			Dir:    os.TempDir(),
 			Forbid: []string{".go"},
@@ -186,8 +235,8 @@ func Test_Config_NoPool(t *testing.T) {
 
 func Test_Config_DeadPool(t *testing.T) {
 	cfg := &Config{
-		Address:    ":8080",
-		MaxRequest: 1024,
+		Address:        ":8080",
+		MaxRequestSize: 1024,
 		Uploads: &UploadsConfig{
 			Dir:    os.TempDir(),
 			Forbid: []string{".go"},
@@ -203,8 +252,8 @@ func Test_Config_DeadPool(t *testing.T) {
 
 func Test_Config_InvalidAddress(t *testing.T) {
 	cfg := &Config{
-		Address:    "",
-		MaxRequest: 1024,
+		Address:        "",
+		MaxRequestSize: 1024,
 		Uploads: &UploadsConfig{
 			Dir:    os.TempDir(),
 			Forbid: []string{".go"},

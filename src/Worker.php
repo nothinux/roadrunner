@@ -4,6 +4,7 @@
  *
  * @author Wolfy-J
  */
+declare(strict_types=1);
 
 namespace Spiral\RoadRunner;
 
@@ -132,7 +133,7 @@ class Worker
      *
      * @throws RoadRunnerException
      */
-    private function handleControl(string $body = null, &$header = null, int $flags): bool
+    private function handleControl(string $body = null, &$header = null, int $flags = 0): bool
     {
         $header = $body;
         if (is_null($body) || $flags & Relay::PAYLOAD_RAW) {

@@ -1,45 +1,25 @@
-RoadRunner
-==========
-[![Latest Stable Version](https://poser.pugx.org/spiral/roadrunner/version)](https://packagist.org/packages/spiral/roadrunner)
-[![GoDoc](https://godoc.org/github.com/spiral/roadrunner?status.svg)](https://godoc.org/github.com/spiral/roadrunner)
-[![Build Status](https://travis-ci.org/spiral/roadrunner.svg?branch=master)](https://travis-ci.org/spiral/roadrunner)
-[![Go Report Card](https://goreportcard.com/badge/github.com/spiral/roadrunner)](https://goreportcard.com/report/github.com/spiral/roadrunner)
-[![Scrutinizer Code Quality](https://scrutinizer-ci.com/g/spiral/roadrunner/badges/quality-score.png)](https://scrutinizer-ci.com/g/spiral/roadrunner/?branch=master)
-[![Codecov](https://codecov.io/gh/spiral/roadrunner/branch/master/graph/badge.svg)](https://codecov.io/gh/spiral/roadrunner/)
+<p align="center">
+ <img src="https://user-images.githubusercontent.com/796136/50286124-6f7f3780-046f-11e9-9f45-e8fedd4f786d.png" height="75px" alt="RoadRunner">
+</p>
+<p align="center">
+ <a href="https://packagist.org/packages/spiral/roadrunner"><img src="https://poser.pugx.org/spiral/roadrunner/version"></a>
+	<a href="https://godoc.org/github.com/spiral/roadrunner"><img src="https://godoc.org/github.com/spiral/roadrunner?status.svg"></a>
+	<a href="https://travis-ci.org/spiral/roadrunner"><img src="https://travis-ci.org/spiral/roadrunner.svg?branch=master"></a>
+	<a href="https://goreportcard.com/report/github.com/spiral/roadrunner"><img src="https://goreportcard.com/badge/github.com/spiral/roadrunner"></a>
+	<a href="https://scrutinizer-ci.com/g/spiral/roadrunner/?branch=master"><img src="https://scrutinizer-ci.com/g/spiral/roadrunner/badges/quality-score.png"></a>
+	<a href="https://codecov.io/gh/spiral/roadrunner/"><img src="https://codecov.io/gh/spiral/roadrunner/branch/master/graph/badge.svg"></a>
+	<a href="https://discord.gg/TFeEmCs"><img src="https://img.shields.io/badge/discord-chat-magenta.svg"></a>
+</p>
 
 RoadRunner is an open source (MIT licensed) high-performance PHP application server, load balancer and process manager.
 It supports running as a service with the ability to extend its functionality on a per-project basis. 
 
 RoadRunner includes PSR-7/PSR-17 compatible HTTP and HTTP/2 server and can be used to replace classic Nginx+FPM setup with much greater performance and flexibility.
 
-Table of Contents 
------------------
-* Introduction
-  * [About RoadRunner](https://github.com/spiral/roadrunner/wiki/About-RoadRunner)
-  * [Installation](https://github.com/spiral/roadrunner/wiki/Installation)
-  * [Configuration](https://github.com/spiral/roadrunner/wiki/Configuration)
-  * [License](https://github.com/spiral/roadrunner/wiki/License)
-* Using RoadRunner
-  * [Environment Configuration](https://github.com/spiral/roadrunner/wiki/Enviroment-Configuration)
-  * [HTTPS and HTTP/2](https://github.com/spiral/roadrunner/wiki/HTTPS-and-HTTP2)
-  * [PHP Workers](https://github.com/spiral/roadrunner/wiki/PHP-Workers)
-  * [Debugging](https://github.com/spiral/roadrunner/wiki/Debugging)
-  * [Server Commands](https://github.com/spiral/roadrunner/wiki/Server-Commands)
-  * [RPC Integration](https://github.com/spiral/roadrunner/wiki/RPC-Integration)
-  * [Restarting Workers](https://github.com/spiral/roadrunner/wiki/Restarting-Workers)
-  * [IDE integration](https://github.com/spiral/roadrunner/wiki/IDE-Integration)
-  * [Error Handling](https://github.com/spiral/roadrunner/wiki/Debug-And-Error-Handling)
-  * [Production Usage](https://github.com/spiral/roadrunner/wiki/Production-Usage)
-* Integrations
-   * [Symfony Framework](https://github.com/spiral/roadrunner/wiki/Symfony-Framework)
-* Server Customization
-  * [Building Server](https://github.com/spiral/roadrunner/wiki/Building-Server)
-  * [Writing Services](https://github.com/spiral/roadrunner/wiki/Writing-Services)
-  * [HTTP Middlewares](https://github.com/spiral/roadrunner/wiki/Middlewares)
-* Additional Notes
-  * [Event Listeners](https://github.com/spiral/roadrunner/wiki/Event-Listeners)
-  * [Standalone Usage](https://github.com/spiral/roadrunner/wiki/Standalone-usage)
-  * [AWS Lambda](https://github.com/spiral/roadrunner/wiki/AWS-Lambda)
+<p align="center">
+	<a href="https://roadrunner.dev/"><b>Official Website</b></a> | 
+	<a href="https://roadrunner.dev/docs"><b>Documentation</b></a>
+</p>
 
 Features:
 --------
@@ -50,15 +30,20 @@ Features:
 - flexible environment configuration
 - no external PHP dependencies, drop-in (based on [Goridge](https://github.com/spiral/goridge))
 - load balancer, process manager and task pipeline
-- frontend agnostic (Queue, PSR-7, [GRPC](https://github.com/spiral/php-grpc), etc)
+- frontend agnostic ([Queue](https://github.com/spiral/jobs), PSR-7, [GRPC](https://github.com/spiral/php-grpc), etc)
 - works over TCP, unix sockets and standard pipes
 - automatic worker replacement and safe PHP process destruction
-- worker lifecycle management (create/allocate/destroy timeouts)
+- worker create/allocate/destroy timeouts
+- max jobs per worker
+- worker lifecycle management (controller) 
+    - maxMemory (graceful stop)
+    - TTL (graceful stop)
+    - idleTTL (graceful stop)
+    - execTTL (brute, max_execution_time)   
 - payload context and body
-- control over max jobs per worker
 - protocol, worker and job level error management (including PHP errors)
-- memory leak failswitch
 - very fast (~250k rpc calls per second on Ryzen 1700X using 16 threads)
+- integrations with Symfony, Laravel, Slim, CakePHP, Zend Expressive, Spiral
 - works on Windows
 
 Example:
@@ -84,7 +69,7 @@ while ($req = $psr7->acceptRequest()) {
 }
 ```
 
-Configuration can be located in `.rr.yaml` file:
+Configuration can be located in `.rr.yaml` file ([full sample](https://github.com/spiral/roadrunner/blob/master/.rr.yaml)):
 
 ```yaml
 http:
